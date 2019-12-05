@@ -42,8 +42,8 @@ In the container, you will make all tasks done to output a tflite mode, with whi
 Enter the container, execute the following commands.
 ```
 #apt install git
-#git clone https://github.com/huaxiaozhong1/Your-Own-TfLite-RaspberryPi-model.git
-cd Your-Own-TfLite-RaspberryPi-model
+#git clone https://github.com/huaxiaozhong1/YourOwnModel-TfLite-RaspberryPi.git
+cd YourOwnModel-TfLite-RaspberryPi
 ```
 Now you could start to utilize my repository.
 
