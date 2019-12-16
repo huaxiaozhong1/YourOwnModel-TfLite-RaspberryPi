@@ -25,29 +25,33 @@ print(tf.version.VERSION)
 def get_input_paras():
 
   parser = argparse.ArgumentParser()
-  parser.add_argument("-W", "--image_width", default=128, \
+  parser.add_argument("-W", "--image_width", default=150, \
     help="image width as input to model")
-  parser.add_argument("-H", "--image_height", default=128, \
+  parser.add_argument("-H", "--image_height", default=150, \
     help="image height as input to model")
   parser.add_argument("-C", "--image_channels", default=3, \
     help="image channels as input to model")
-  parser.add_argument("-r", "--rotation_range", default=5, \
+  parser.add_argument("-r", "--rotation_range", default=40, \
     help="image rotation range for data augmentation")
-  parser.add_argument("-ws", "--width_shift_range", default=0.1, \
+  parser.add_argument("-ws", "--width_shift_range", default=0.2, \
     help="image width shift range for data augmentation")
-  parser.add_argument("-hs", "--height_shift_range", default=0.1, \
+  parser.add_argument("-hs", "--height_shift_range", default=0.2, \
     help="image height shift range for data augmentation")
-  parser.add_argument("-s", "--shear_range", default=0.1, \
+  parser.add_argument("-s", "--shear_range", default=0.2, \
     help="image shear range for data augmentation")
-  parser.add_argument("-z", "--zoom_range", default=0.1, \
-    help="image zoom range for data augmentation")
+  parser.add_argument("-z", "--zoom_range", default=0.2, \
+    help="image zoom range for data augmentation")  
+  parser.add_argument("-hf", "--horizontal_flip", default=True, \
+    help="image flipping half of the images horizontally")
+  parser.add_argument("-fm", "--fill_mode", default="nearest", \
+    help="filling mode when a rotation or a width/height shift happens")
   parser.add_argument("-t", "--train_dir", \
     default="./flower_photos/train", \
     help="directory to get training data")
   parser.add_argument("-v", "--val_dir", default="./flower_photos/validation", \
     help="directory to get validation data")
   parser.add_argument("-b", "--batch_size", default=64, \
-    help="batch size for data generator")
+    help="batch size for data generation")
   parser.add_argument("-a", "--train_acc", default=0.96, \
     help="accuracy for training to reach")
   parser.add_argument("-va", "--val_acc", default=0.80, \
@@ -55,7 +59,7 @@ def get_input_paras():
   parser.add_argument("-e", "--epochs", default=5000, \
     help="iteration number the training runs over all the data")
   parser.add_argument("-m", "--model_file", default="my_model.h5", \
-    help="file we finally save the mode to")
+    help="file we finally save the model to")
   args = parser.parse_args()
 
   return args
@@ -64,24 +68,27 @@ def create_model(args):
 
   model = tf.keras.models.Sequential()
 
-  model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='relu',
+  model.add(tf.keras.layers.Conv2D(32, (3, 3), activation='tanh',
       input_shape=(int(args.image_width), int(args.image_height), int(args.image_channels))))
   model.add(tf.keras.layers.MaxPooling2D((2, 2)))
 
-  model.add(tf.keras.layers.Conv2D(128, (3, 3), activation='relu'))
+  model.add(tf.keras.layers.Conv2D(64, (3, 3), activation='tanh'))
   model.add(tf.keras.layers.MaxPooling2D((2, 2)))
 
-  model.add(tf.keras.layers.Conv2D(128, (3, 3), activation='relu'))
+  model.add(tf.keras.layers.Conv2D(128, (3, 3), activation='tanh'))
+  model.add(tf.keras.layers.MaxPooling2D((2, 2)))
+
+  model.add(tf.keras.layers.Conv2D(128, (3, 3), activation='tanh'))
   model.add(tf.keras.layers.MaxPooling2D((2, 2)))
 
   model.add(tf.keras.layers.Flatten())
-  model.add(tf.keras.layers.Dense(512, activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
+  model.add(tf.keras.layers.Dense(512, activation='tanh', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
   model.add(tf.keras.layers.Dropout(0.5))
 
   model.add(tf.keras.layers.Dense(10, activation='softmax'))
 
   model.compile(loss='sparse_categorical_crossentropy',
-                optimizer=tf.keras.optimizers.RMSprop(lr=0.00001),
+                optimizer=tf.keras.optimizers.RMSprop(lr=0.0001),
                 metrics=['accuracy'])
 
   print(model.summary())
@@ -98,7 +105,9 @@ def collect_data(args):
       width_shift_range=int(args.width_shift_range),
       height_shift_range=int(args.height_shift_range),
       shear_range=int(args.shear_range),
-      zoom_range=int(args.zoom_range))
+      zoom_range=int(args.zoom_range),
+      horizontal_flip=True,
+      fill_mode='nearest')
 
   test_datagen = tf.keras.preprocessing.image.ImageDataGenerator(rescale=1./255)
 
@@ -123,6 +132,10 @@ if __name__ == "__main__":
   # python3 generate_my_model.py
   args = get_input_paras()
 
+  # Keep the training accuracy and validation accuracy for the criteria of stopping. 
+  max_acc = args.train_acc
+  max_val_acc = args.val_acc
+
   # Create a convolutional neural network model. It is a 2D, 3 layers model
   # based at tf.keras APIs. But you could replace it with any of your own ones.
   model = create_model(args)
@@ -137,9 +150,15 @@ if __name__ == "__main__":
   # validation-set, and etc.
   class MyCustomCallback(tf.keras.callbacks.Callback):
       def on_epoch_end(self, epoch, logs=None):
-          print(' === epoch {}, val_loss{:7.4f}, val_acc{:7.4f}.'.format(epoch, logs['val_loss'], logs['val_acc']))
-          # Set criteria to stop traing.
-          if ((logs['val_acc'] > int(args.val_acc)) or (logs['acc'] > int(args.train_acc))):
+          # print(' === epoch {}, acc{:7.4f}, val_acc{:7.4f}.'.format(epoch, logs['acc'], logs['val_acc']))
+          if((epoch%100) == 0):
+            f_name = args.model_file
+            name_pos = f_name.find(".h5")
+            f_name = f_name[0:name_pos]
+            keras_file = f_name + "." + str(epoch) + ".h5"
+            tf.keras.models.save_model(model, keras_file)
+          # Set criteria to stop training.
+          if ((logs['val_acc'] > max_val_acc) or (logs['acc'] > max_acc)):
             self.stopped_epoch = epoch
             self.model.stop_training = True
 

@@ -9,9 +9,9 @@ def get_input_paras():
   parser = argparse.ArgumentParser()
   parser.add_argument("-i", "--image_file", default="daisy.bmp", \
     help="image(bmp format) to recognize")
-  parser.add_argument("-W", "--input_width", default=128, \
+  parser.add_argument("-W", "--input_width", default=150, \
     help="image width the model accepts as input")
-  parser.add_argument("-H", "--input_height", default=128, \
+  parser.add_argument("-H", "--input_height", default=150, \
     help="image height the model accepts as input")
   parser.add_argument("-m", "--model_file", default="my_model.h5", \
     help="Tf keras model HDF5 file used to convert to tflite model")

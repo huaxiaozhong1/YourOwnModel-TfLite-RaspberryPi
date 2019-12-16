@@ -16,12 +16,12 @@ At the end, you will see that **your RPI board is able to recognize images**.
 #### 1.1) Setup Tf docker image.
 With GPU: 
 ```
-$sudo docker pull tensorflow/tensorflow:latest-gpu-py3
-$sudo docker run --runtime=nvidia -it tensorflow/tensorflow:latest-gpu-py3 bash
+$ sudo docker pull tensorflow/tensorflow:1.14.0-gpu-py3
+$ sudo docker run --runtime=nvidia --name <my_model> -it tensorflow/tensorflow:latest-gpu-py3 bash
 ```
 Or with cpu.
 ```
-$sudo docker run -it tensorflow/tensorflow:latest-py3 bash
+$sudo docker run --name <my_model> -it tensorflow/tensorflow:latest-py3 bash
 ```
 Now, the latest Tf image has been loaded at your host, and you are inside a container of the image. On my case, it is the version created on June 20th, 2019.
 
@@ -29,45 +29,45 @@ To understand the installation in detail, you could get reference from [Install 
 
 #### 1.2) Setup the docker containre.
  
-Exit the container, rename it as a name that is easier for you to remember. On my case, it is called as "my_model".
-Type the following command at your host:
+Exit the container, type the following command at your host:
 ```
-$sudo docker container start my_model
-$sudo docker container attach my_model
-```
+$ sudo docker container start <my_model>
+$ sudo docker container exec -it <my_model> /bin/bash
+ ```
 Now you have entered your Tf docker container. 
 In the container, you will make all tasks done to output a tflite mode, with which an image on RPI will be recognized.
 
 #### 1.3) Clone the project respository from github.
 Enter the container, execute the following commands.
 ```
-#apt install git
-#git clone https://github.com/huaxiaozhong1/YourOwnModel-TfLite-RaspberryPi.git
-cd YourOwnModel-TfLite-RaspberryPi
+# cd home
+# apt update
+# apt install git
+# git clone https://github.com/huaxiaozhong1/YourOwnModel-TfLite-RaspberryPi.git
+# cd YourOwnModel-TfLite-RaspberryPi
 ```
 Now you could start to utilize my repository.
 
 #### 1.4) Setup necessary environment in the container.
 In the container, run some more commands as below.
 ```
-#pip3 install pillow
-#apt install python-scipy
-#pip3 install scipy
+# pip3 install pillow==6.0.0
+# apt install python-scipy=0.19.1-2ubuntu1 -V
+# pip3 install scipy==1.3.0
 
 #curl http://download.tensorflow.org/example_images/flower_photos.tgz \
     | tar xz -C tf_files
-#cd flower_photos
 ```
 In directory "flowr_photos", there are 5 folders that contain ~4300 pyotos totally. 
-We sugguest you to create 2 sub-folders under "flower_photos": "train" and "validation", move part of the 5 folders into the "train", and the other into "validation".
+We sugguest you to create 2 sub-folders under "flower_photos": "train" and "validation", move part of the 5 folders into the "train", and the others into "validation".
 On my case, the photos under "train" are ~80% in total; the remaining ~20% into "validation".
-From [complete-procedure-to-train-and-recognize-you-by-raspberry-pi-3-and-tensorflow-lite](https://github.com/huaxiaozhong1/complete-procedure-to-train-and-recognize-you-by-raspberry-pi-3-and-tensorflow-lite), you could know the way to take some your own photos from camera on RPI. So, if you want, you could generate photos, for more classes and labels, then split and put them into sub-folders under "train" and "validation".
+From [complete-procedure-to-train-and-recognize-you-by-raspberry-pi-3-and-tensorflow-lite](https://github.com/huaxiaozhong1/complete-procedure-to-train-and-recognize-you-by-raspberry-pi-3-and-tensorflow-lite), you could know the way to take some your own photos from camera on RPI. So, if you want, you could generate photos, which generate more classes and labels, then split and put them under "train" and "validation" as new sub-folders.
 
 #### 1.5) Generate our Tf model.
 
 The following command uses of all default input-parameters to generate a Tf model.
 ```
-#python3 generate_my_model.py
+# python3 generate_my_model.py
 ```
 To get explanation for each input-parameter, use option -h:
 ```
@@ -77,20 +77,17 @@ If want to know the control-flow and data-flow of all the commands, please check
 It is just a demo to help you in creating your own Tf model. The model can be improved from a lot of aspects. 
 We could open another much bigger topic for these improvements out of this repository :-)
 
-Come back to my report, when running
+On my test, the process got ended on epoch 348. The final lines of the log are as:
 ```
-#python3 generate_my_model.py --epoch 1000
+Epoch 346/5000
+55/55 [==============================] - 35s 635ms/step - loss: 0.9639 - acc: 0.9484 - val_loss: 1.8815 - val_acc: 0.7088
+Epoch 347/5000
+55/55 [==============================] - 35s 633ms/step - loss: 0.9551 - acc: 0.9495 - val_loss: 1.8810 - val_acc: 0.7224
+Epoch 348/5000
+55/55 [==============================] - 35s 632ms/step - loss: 0.9293 - acc: 0.9607 - val_loss: 1.9334 - val_acc: 0.7015
+
 ```
-here are the final lines of the log:
-```
-Epoch 999/1000
-54/55 [============================>.] - ETA: 2s - loss: 0.3163 - acc: 0.9451 === epoch 998, val_loss 0.9640, val_acc 0.7383.
-55/55 [==============================] - 141s 3s/step - loss: 0.3178 - acc: 0.9447 - val_loss: 0.9640 - val_acc: 0.7383
-Epoch 1000/1000
-54/55 [============================>.] - ETA: 2s - loss: 0.3197 - acc: 0.9387 === epoch 999, val_loss 1.1014, val_acc 0.7236.
-55/55 [==============================] - 146s 3s/step - loss: 0.3198 - acc: 0.9389 - val_loss: 1.1014 - val_acc: 0.7236
-```
-That is: the accuracy over train-set is 0.9389, the one over validation-set is 0.7236. 
+That is: the accuracy over train-set is 0.9607, the one over validation-set is 0.7015. 
 At the end, the script saves the Tf model into a HDF5 file. Its name is my_model.h5, as default. You could use option -m to set whatever name you like.
 
 #### 1.6) Generate our Tf-lite model.
@@ -105,12 +102,15 @@ python3 generate_my_tflite_model.py -i flower_photos/validation/daisy/5884807222
 ```
 Then the last lines of log are like below.
 ```
-=== input of tflite model:  {'name': 'conv2d_input', 'index': 9, 'shape': array([  1, 128, 128,   3], dtype=int32), 'dtype': <class 'numpy.float32'>, 'quantization': (0.0, 0)}
-=== output of tflite model:  {'name': 'dense_1/Softmax', 'index': 15, 'shape': array([ 1, 10], dtype=int32), 'dtype': <class 'numpy.float32'>, 'quantization': (0.0, 0)}
-=== Results from recognizing the image with Tf-lite model::  [[9.9985361e-01 4.1775102e-06 1.8509031e-11 6.4527019e-05 5.3741755e-05
-  2.3991770e-05 1.5108190e-18 3.9252743e-18 2.4350932e-18 8.3753005e-18]]
+=== Results from recognizing the image with Tf model:  [[9.9960464e-01 2.7910102e-04 7.4657025e-12 1.5797602e-07 4.8728820e-05
+  6.7499888e-05 2.9397842e-11 6.0220071e-12 4.9128349e-12 5.0239131e-12]]
 
-=== Label of the image that we recognize with Tf-lite model: 0 
+=== Label of the image that we recognize with Tf model: 0
+...
+=== Results from recognizing the image with Tf-lite model:  [[9.9979275e-01 1.4720378e-04 1.3955239e-11 1.4476156e-07 2.3148436e-05
+  3.6804420e-05 2.8105155e-11 5.8846018e-12 4.1493631e-12 3.7902936e-12]]
+
+=== Label of the image that we recognize with Tf-lite model: 0
 ```
 Namely, it succeeds in recognizing a photo of "daisy" in "validation-set" as daisy.
 
