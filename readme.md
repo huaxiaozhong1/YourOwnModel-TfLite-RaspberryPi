@@ -21,21 +21,20 @@ $ sudo docker run --runtime=nvidia --name <my_model> -it tensorflow/tensorflow:l
 ```
 Or with cpu.
 ```
-$sudo docker run --name <my_model> -it tensorflow/tensorflow:latest-py3 bash
+$sudo docker run --name <my_model> -it tensorflow/tensorflow:1.14.0-py3 bash
 ```
-Now, the latest Tf image has been loaded at your host, and you are inside a container of the image. On my case, it is the version created on June 20th, 2019.
+Now, the Tf image with version 1.14.0 has been loaded at your host, and you are inside a container of the image.
 
 To understand the installation in detail, you could get reference from [Install Tensorflow with Docker](https://www.tensorflow.org/install/docker).
 
 #### 1.2) Setup the docker containre.
  
-Exit the container, type the following command at your host:
+After exiting the container, you could re-enter it by typing the following command at your host:
 ```
 $ sudo docker container start <my_model>
 $ sudo docker container exec -it <my_model> /bin/bash
  ```
-Now you have entered your Tf docker container. 
-In the container, you will make all tasks done to output a tflite mode, with which an image on RPI will be recognized.
+In the container, you can make all tasks done to output a tflite mode, with which an image on RPI will be recognized.
 
 #### 1.3) Clone the project respository from github.
 Enter the container, execute the following commands.
